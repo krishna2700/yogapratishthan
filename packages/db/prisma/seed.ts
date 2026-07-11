@@ -1,19 +1,19 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Weekday } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const BATCHES = [
-  { name: "Batch A", days: "Monday & Thursday", startTime: "07:30", endTime: "08:30" },
-  { name: "Batch B", days: "Monday & Thursday", startTime: "09:00", endTime: "10:00" },
-  { name: "Batch C", days: "Tuesday & Friday", startTime: "07:30", endTime: "08:30" },
-  { name: "Batch D", days: "Tuesday & Friday", startTime: "09:00", endTime: "10:00" },
-] as const;
+const BATCHES: { name: string; weekdays: Weekday[]; startTime: string; endTime: string }[] = [
+  { name: "Batch A", weekdays: [Weekday.MONDAY, Weekday.THURSDAY], startTime: "07:30", endTime: "08:30" },
+  { name: "Batch B", weekdays: [Weekday.MONDAY, Weekday.THURSDAY], startTime: "09:00", endTime: "10:00" },
+  { name: "Batch C", weekdays: [Weekday.TUESDAY, Weekday.FRIDAY], startTime: "07:30", endTime: "08:30" },
+  { name: "Batch D", weekdays: [Weekday.TUESDAY, Weekday.FRIDAY], startTime: "09:00", endTime: "10:00" },
+];
 
 async function main() {
   for (const batch of BATCHES) {
     await prisma.batch.upsert({
       where: { name: batch.name },
-      update: { days: batch.days, startTime: batch.startTime, endTime: batch.endTime },
+      update: { weekdays: batch.weekdays, startTime: batch.startTime, endTime: batch.endTime },
       create: batch,
     });
   }

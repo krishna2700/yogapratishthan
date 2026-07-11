@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
@@ -30,6 +31,7 @@ async function uploadPhoto(file: File): Promise<string> {
 }
 
 export function AdmissionForm() {
+  const router = useRouter();
   const [submitAction, setSubmitAction] = useState<"save" | "saveAndAddAnother" | null>(null);
 
   const form = useForm<AdmissionFormInput, unknown, AdmissionFormValues>({
@@ -44,7 +46,7 @@ export function AdmissionForm() {
   async function submit(values: AdmissionFormValues, addAnother: boolean) {
     setSubmitAction(addAnother ? "saveAndAddAnother" : "save");
     try {
-      const photoUrl = await uploadPhoto(values.photo);
+      const photoUrl = values.photo ? await uploadPhoto(values.photo) : undefined;
 
       const res = await fetch("/api/students", {
         method: "POST",
@@ -59,6 +61,7 @@ export function AdmissionForm() {
           photoUrl,
           healthIssues: values.healthIssues,
           healthIssueDetails: values.healthIssueDetails || undefined,
+          joiningDate: new Date(values.joiningDate).toISOString(),
           paymentReceived: values.paymentReceived,
           numberOfSessions: values.numberOfSessions,
           batchId: values.batchId,
@@ -78,13 +81,19 @@ export function AdmissionForm() {
         throw new Error(body.error ?? "Something went wrong. Please try again.");
       }
 
+      const data: { student: { id: string } } = await res.json();
+
       toast.success(`${values.firstName} ${values.lastName} was admitted successfully`, {
-        description: addAnother ? "Form cleared — ready for the next student." : "Admission saved.",
+        description: addAnother
+          ? "Form cleared — ready for the next student."
+          : "Their session schedule has been generated.",
       });
 
-      reset(admissionFormDefaultValues);
       if (addAnother) {
+        reset(admissionFormDefaultValues);
         setFocus("firstName");
+      } else {
+        router.push(`/students/${data.student.id}`);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");

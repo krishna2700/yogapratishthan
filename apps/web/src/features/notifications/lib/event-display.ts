@@ -1,0 +1,34 @@
+import {
+  Bell,
+  CalendarOff,
+  CalendarPlus,
+  CalendarSync,
+  CheckCircle2,
+  Clock,
+  MessageCircle,
+  Repeat,
+  ShieldAlert,
+  StickyNote,
+  TrendingDown,
+  UserPlus,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
+import type { EventType } from "@yogapratishthan/db";
+
+export const EVENT_DISPLAY: Record<EventType, { label: string; icon: LucideIcon }> = {
+  ADMISSION: { label: "Admission", icon: UserPlus },
+  ATTENDANCE_MARKED: { label: "Absent", icon: XCircle },
+  SESSION_COMPLETED: { label: "Attended", icon: CheckCircle2 },
+  MAKEUP_ADDED: { label: "Make-up added", icon: CalendarPlus },
+  MAKEUP_EXPIRED: { label: "Make-up expired", icon: Clock },
+  VACATION_CREATED: { label: "Vacation created", icon: CalendarOff },
+  VACATION_UPDATED: { label: "Vacation updated", icon: CalendarOff },
+  VACATION_ADJUSTMENT: { label: "Rescheduled", icon: CalendarSync },
+  RENEWAL: { label: "Renewed", icon: Repeat },
+  BATCH_CHANGED: { label: "Batch changed", icon: Bell },
+  MEMBERSHIP_EXPIRED: { label: "Membership expired", icon: ShieldAlert },
+  LOW_SESSIONS: { label: "Running low", icon: TrendingDown },
+  NOTE_ADDED: { label: "Note added", icon: StickyNote },
+  WHATSAPP_SENT: { label: "WhatsApp sent", icon: MessageCircle },
+};

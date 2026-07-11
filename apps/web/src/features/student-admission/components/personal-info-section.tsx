@@ -26,7 +26,7 @@ export function PersonalInfoSection({ form }: { form: AdmissionUseFormReturn }) 
 
   return (
     <FormSection icon={User} title="Personal Information">
-      <FieldWrapper label="Student photo" required error={errors.photo?.message}>
+      <FieldWrapper label="Student photo" hint="Optional" error={errors.photo?.message}>
         <Controller
           name="photo"
           control={control}

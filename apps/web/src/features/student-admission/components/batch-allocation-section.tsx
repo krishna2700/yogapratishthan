@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { FieldWrapper } from "@/components/form/field-wrapper";
 import { FormSection } from "./form-section";
 import { useBatches } from "../hooks/use-batches";
+import { formatWeekdays } from "@/lib/weekday";
 import type { AdmissionUseFormReturn } from "../client-schema";
 
 export function BatchAllocationSection({ form }: { form: AdmissionUseFormReturn }) {
@@ -36,7 +37,7 @@ export function BatchAllocationSection({ form }: { form: AdmissionUseFormReturn 
                     <RadioGroupItem id={`batch-${batch.id}`} value={batch.id} className="mt-0.5" />
                     <span className="flex flex-col gap-0.5">
                       <span className="text-sm font-medium text-foreground">{batch.name}</span>
-                      <span className="text-xs text-muted-foreground">{batch.days}</span>
+                      <span className="text-xs text-muted-foreground">{formatWeekdays(batch.weekdays)}</span>
                       <span className="text-xs text-muted-foreground">
                         {batch.startTime} – {batch.endTime}
                       </span>

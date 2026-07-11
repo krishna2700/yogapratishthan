@@ -14,6 +14,16 @@ export function AdmissionDetailsSection({ form }: { form: AdmissionUseFormReturn
 
   return (
     <FormSection icon={ClipboardList} title="Admission Details">
+      <FieldWrapper
+        htmlFor="joiningDate"
+        label="Date of joining"
+        required
+        error={errors.joiningDate?.message}
+        hint="The student's session schedule starts from this date"
+      >
+        <Input id="joiningDate" type="date" {...register("joiningDate")} />
+      </FieldWrapper>
+
       <div className="grid gap-5 sm:grid-cols-2">
         <FieldWrapper
           htmlFor="paymentReceived"

@@ -6,12 +6,13 @@ import { ACCEPTED_PHOTO_TYPES, MAX_PHOTO_SIZE_BYTES } from "./constants";
 export const admissionFormSchema = studentBaseSchema.and(
   z.object({
     photo: z
-      .instanceof(File, { message: "Student photo is required" })
+      .instanceof(File)
       .refine(
         (file) => ACCEPTED_PHOTO_TYPES.includes(file.type as (typeof ACCEPTED_PHOTO_TYPES)[number]),
         "Photo must be a JPEG, PNG, or WEBP image",
       )
-      .refine((file) => file.size <= MAX_PHOTO_SIZE_BYTES, "Photo must be smaller than 5MB"),
+      .refine((file) => file.size <= MAX_PHOTO_SIZE_BYTES, "Photo must be smaller than 5MB")
+      .optional(),
   }),
 );
 
@@ -34,8 +35,11 @@ export const admissionFormDefaultValues: AdmissionFormInput = {
   whatsappNumber: "",
   healthIssues: [],
   healthIssueDetails: "",
+  // Default to today — the common case is same-day admission — but the
+  // instructor can change it for backdated entries or a future start.
+  joiningDate: new Date().toISOString().split("T")[0] as unknown as AdmissionFormInput["joiningDate"],
   paymentReceived: "" as unknown as AdmissionFormInput["paymentReceived"],
   numberOfSessions: "" as unknown as AdmissionFormInput["numberOfSessions"],
   batchId: "",
-  photo: undefined as unknown as AdmissionFormInput["photo"],
+  photo: undefined,
 };

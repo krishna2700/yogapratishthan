@@ -28,18 +28,29 @@ enum HealthIssue {
   OTHER
 }
 
+enum Weekday {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
 /// A recurring class slot the instructor teaches. Seeded once; not created
 /// through the admission form.
 model Batch {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  days      String
+  id        String    @id @default(cuid())
+  name      String    @unique
+  weekdays  Weekday[]
   startTime String
   endTime   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   students Student[]
+  sessions Session[]
 
   @@map("batches")
 }
@@ -48,21 +59,27 @@ model Student {
   id String @id @default(cuid())
 
   // Personal information
-  firstName       String
-  lastName        String
-  dob             DateTime
-  gender          Gender
-  mobileNumber    String
-  whatsappNumber  String?
-  photoUrl        String
+  firstName      String
+  lastName       String
+  dob            DateTime
+  gender         Gender
+  mobileNumber   String
+  whatsappNumber String?
+  photoUrl       String?
 
   // Health information
   healthIssues       HealthIssue[]
   healthIssueDetails String?
 
-  // Admission details
-  paymentReceived   Decimal @db.Decimal(10, 2)
-  numberOfSessions  Int
+  // Admission details. paymentReceived/numberOfSessions reflect the
+  // original admission purchase only — see Renewal for subsequent
+  // purchases. Actual remaining/completed sessions are always computed
+  // live from Session rows, never stored as a counter. joiningDate is the
+  // calendar date the student's session schedule starts from (not
+  // necessarily the same day the admission was entered into the system).
+  joiningDate      DateTime @db.Date
+  paymentReceived  Decimal  @db.Decimal(10, 2)
+  numberOfSessions Int
 
   // Batch allocation (editable later)
   batchId String
@@ -71,7 +88,168 @@ model Student {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  sessions Session[]
+  notes    Note[]
+  renewals Renewal[]
+  events   Event[]
+
   @@index([batchId])
   @@index([createdAt])
   @@map("students")
+}
+
+enum SessionStatus {
+  UPCOMING
+  PRESENT
+  ABSENT
+  CANCELLED
+  VACATION
+  MAKEUP
+  EXPIRED
+}
+
+enum AbsenceReason {
+  SICK
+  TRAVEL
+  BUSY
+  UNKNOWN
+  OTHER
+}
+
+/// The core source of truth. A student's "sessions" are never a decremented
+/// counter — purchasing N sessions generates N of these rows up front, and
+/// attendance, vacations, and make-ups all mutate this table instead of a
+/// summary number. Everything else (remaining count, status, reminders,
+/// analytics) is computed by querying Session.
+model Session {
+  id String @id @default(cuid())
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  batchId   String
+  batch     Batch   @relation(fields: [batchId], references: [id], onDelete: Restrict)
+
+  // Snapshot of the class slot at generation time, so a later batch time
+  // change doesn't rewrite history for already-generated sessions.
+  scheduledDate DateTime @db.Date
+  startTime     String
+  endTime       String
+
+  status SessionStatus @default(UPCOMING)
+
+  absenceReason AbsenceReason?
+  absenceNote   String?
+
+  // A replacement session points back at the one it replaces — either an
+  // explicit make-up for an absence, or the auto-generated continuation of
+  // a session a vacation bumped off its date. isMakeup distinguishes the
+  // former (admin-picked date, 2-month expiry) from the latter (system
+  // picks the next valid date automatically, no expiry).
+  isMakeup          Boolean   @default(false)
+  originalSessionId String?
+  originalSession   Session?  @relation("MakeupFor", fields: [originalSessionId], references: [id])
+  makeupSessions    Session[] @relation("MakeupFor")
+  makeupReason      String?
+  makeupExpiresAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([batchId, scheduledDate])
+  @@index([status])
+  @@index([scheduledDate])
+  @@map("sessions")
+}
+
+/// Center-wide closure (holiday, maintenance, admin vacation). Not tied to a
+/// specific student or batch — every batch pauses for the range.
+model Vacation {
+  id        String   @id @default(cuid())
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  reason    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("vacations")
+}
+
+enum NoteCategory {
+  GENERAL
+  HEALTH
+  SCHEDULING
+  PAYMENT
+  OTHER
+}
+
+model Note {
+  id        String       @id @default(cuid())
+  studentId String
+  student   Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  category  NoteCategory @default(GENERAL)
+  content   String
+  author    String       @default("Instructor")
+  createdAt DateTime     @default(now())
+
+  @@index([studentId])
+  @@map("notes")
+}
+
+/// A subsequent purchase of sessions after the initial admission. Each
+/// renewal generates its own batch of Session rows continuing the
+/// student's schedule.
+model Renewal {
+  id               String   @id @default(cuid())
+  studentId        String
+  student          Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  paymentReceived  Decimal  @db.Decimal(10, 2)
+  numberOfSessions Int
+  createdAt        DateTime @default(now())
+
+  @@index([studentId])
+  @@map("renewals")
+}
+
+enum EventType {
+  ADMISSION
+  ATTENDANCE_MARKED
+  SESSION_COMPLETED
+  MAKEUP_ADDED
+  MAKEUP_EXPIRED
+  VACATION_CREATED
+  VACATION_UPDATED
+  VACATION_ADJUSTMENT
+  RENEWAL
+  BATCH_CHANGED
+  MEMBERSHIP_EXPIRED
+  LOW_SESSIONS
+  NOTE_ADDED
+  WHATSAPP_SENT
+}
+
+/// Append-only activity log. Every notable thing that happens writes one of
+/// these. Powers the student timeline (filtered by studentId, always shows
+/// every event regardless of clearedAt — history is never hidden there) and
+/// the notification center (unfiltered except clearedAt), and is the hook
+/// point for future event-driven integrations (WhatsApp, email) — trigger
+/// off event creation rather than polling state.
+model Event {
+  id        String    @id @default(cuid())
+  studentId String?
+  student   Student?  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type      EventType
+  message   String
+  metadata  Json?
+  isRead    Boolean   @default(false)
+  // Set when dismissed from the notification center. The event itself is
+  // never deleted (the student timeline must stay a complete history) —
+  // this only hides it from the notification list.
+  clearedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([studentId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("events")
 }

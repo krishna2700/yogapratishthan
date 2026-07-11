@@ -50,6 +50,10 @@ export const studentBaseSchema = z
       .or(z.literal("")),
     healthIssues: z.array(z.enum(HEALTH_ISSUE_VALUES)).default([]),
     healthIssueDetails: z.string().trim().max(1000).optional().or(z.literal("")),
+    joiningDate: z.preprocess(
+      blankToUndefined,
+      z.coerce.date({ error: requiredOr("Date of joining is required", "Enter a valid date of joining") }),
+    ),
     paymentReceived: z.preprocess(
       blankToUndefined,
       z.coerce
@@ -81,10 +85,10 @@ export const studentBaseSchema = z
 
 export type StudentBaseInput = z.infer<typeof studentBaseSchema>;
 
-/** Server-side payload: photo has already been uploaded to a URL. */
+/** Server-side payload: photo, if provided, has already been uploaded to a URL. */
 export const createStudentSchema = studentBaseSchema.and(
   z.object({
-    photoUrl: z.string().min(1, "Student photo is required"),
+    photoUrl: z.string().min(1).optional(),
   }),
 );
 
