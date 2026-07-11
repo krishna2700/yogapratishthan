@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum HealthIssue {
+  SURGERY
+  INJURY
+  CERVICAL_SHOULDER
+  BACK
+  KNEE
+  BLOOD_PRESSURE
+  HEART
+  THYROID
+  ANXIETY_DEPRESSION
+  DIABETES
+  OTHER
+}
+
+/// A recurring class slot the instructor teaches. Seeded once; not created
+/// through the admission form.
+model Batch {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  days      String
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  students Student[]
+
+  @@map("batches")
+}
+
+model Student {
+  id String @id @default(cuid())
+
+  // Personal information
+  firstName       String
+  lastName        String
+  dob             DateTime
+  gender          Gender
+  mobileNumber    String
+  whatsappNumber  String?
+  photoUrl        String
+
+  // Health information
+  healthIssues       HealthIssue[]
+  healthIssueDetails String?
+
+  // Admission details
+  paymentReceived   Decimal @db.Decimal(10, 2)
+  numberOfSessions  Int
+
+  // Batch allocation (editable later)
+  batchId String
+  batch   Batch  @relation(fields: [batchId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([batchId])
+  @@index([createdAt])
+  @@map("students")
+}
