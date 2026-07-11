@@ -29,3 +29,4 @@ packages/db/generated/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+.vercel
