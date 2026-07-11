@@ -1,0 +1,43 @@
+{
+  "name": "@yogapratishthan/desktop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Yogapratishthan desktop app — a native window onto the live Yogapratishthan admin site.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:mac": "electron-builder --mac dmg"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.yogapratishthan.desktop",
+    "productName": "Yogapratishthan",
+    "icon": "../../assets/icon/icon.icns",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js"
+    ],
+    "mac": {
+      "category": "public.app-category.healthcare-fitness",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "Yogapratishthan",
+      "icon": "../../assets/icon/icon.icns"
+    }
+  }
+}

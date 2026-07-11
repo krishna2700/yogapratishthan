@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5EEAD4"/>
+      <stop offset="55%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#134E4A"/>
+    </linearGradient>
+    <linearGradient id="fig" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#FFF7ED"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded-square app background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#bg)"/>
+
+  <!-- soft inner glow -->
+  <circle cx="512" cy="470" r="330" fill="#FFFFFF" opacity="0.06"/>
+
+  <!-- sun / halo behind the figure -->
+  <circle cx="512" cy="440" r="230" fill="none" stroke="#FDE68A" stroke-width="10" opacity="0.55"/>
+
+  <!-- yoga figure: seated lotus / meditation pose, arms resting on knees -->
+  <g fill="url(#fig)">
+    <!-- head -->
+    <circle cx="512" cy="330" r="72"/>
+    <!-- neck -->
+    <rect x="492" y="392" width="40" height="34" rx="16"/>
+    <!-- torso -->
+    <path d="M512 410
+             C 420 410 388 486 388 560
+             C 388 610 440 636 512 636
+             C 584 636 636 610 636 560
+             C 636 486 604 410 512 410 Z"/>
+    <!-- crossed legs (lotus base) -->
+    <path d="M300 700
+             C 300 640 372 616 430 634
+             C 468 646 488 668 512 668
+             C 536 668 556 646 594 634
+             C 652 616 724 640 724 700
+             C 724 748 636 760 512 760
+             C 388 760 300 748 300 700 Z"/>
+    <!-- left arm resting on knee -->
+    <path d="M400 560 C 352 578 320 616 314 664
+              C 312 682 328 694 344 686
+              C 360 678 366 656 378 636
+              C 390 616 410 596 424 584 Z"/>
+    <!-- right arm resting on knee -->
+    <path d="M624 560 C 672 578 704 616 710 664
+              C 712 682 696 694 680 686
+              C 664 678 658 656 646 636
+              C 634 616 614 596 600 584 Z"/>
+  </g>
+
+  <!-- lotus petals beneath -->
+  <g fill="#FDE68A" opacity="0.9">
+    <ellipse cx="512" cy="792" rx="30" ry="14"/>
+    <ellipse cx="452" cy="784" rx="28" ry="13" transform="rotate(-18 452 784)"/>
+    <ellipse cx="572" cy="784" rx="28" ry="13" transform="rotate(18 572 784)"/>
+    <ellipse cx="402" cy="762" rx="26" ry="12" transform="rotate(-32 402 762)"/>
+    <ellipse cx="622" cy="762" rx="26" ry="12" transform="rotate(32 622 762)"/>
+  </g>
+</svg>

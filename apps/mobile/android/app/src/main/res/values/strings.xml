@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Yogapratishthan</string>
+    <string name="title_activity_main">Yogapratishthan</string>
+    <string name="package_name">com.yogapratishthan.app</string>
+    <string name="custom_url_scheme">com.yogapratishthan.app</string>
+</resources>

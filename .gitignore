@@ -25,6 +25,16 @@ pnpm-debug.log*
 # Prisma
 packages/db/generated/
 
+# Desktop (Electron) and mobile (Capacitor/Android) build output — large
+# binaries, rebuilt on demand, never committed.
+release/
+apps/desktop/dist/
+apps/mobile/android/.gradle/
+apps/mobile/android/build/
+apps/mobile/android/app/build/
+apps/mobile/android/local.properties
+apps/mobile/android/captures/
+
 # IDE
 .vscode/*
 !.vscode/extensions.json

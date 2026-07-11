@@ -24,7 +24,8 @@
       "prisma",
       "esbuild",
       "sharp",
-      "unrs-resolver"
+      "unrs-resolver",
+      "electron"
     ]
   }
 }

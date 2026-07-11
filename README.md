@@ -19,6 +19,7 @@ or tablet between classes.
 - [Project structure](#project-structure)
 - [Local development](#local-development)
 - [Deployment](#deployment)
+- [Desktop and mobile apps](#desktop-and-mobile-apps)
 - [Use cases — how the instructor actually uses this](#use-cases--how-the-instructor-actually-uses-this)
 - [Known limitations / deliberate simplifications](#known-limitations--deliberate-simplifications)
 
@@ -188,6 +189,11 @@ packages/db/
 ├── prisma/schema.prisma        The whole data model
 ├── prisma/seed.ts              Seeds the 4 batches
 └── src/index.ts                Prisma client singleton + re-exports
+
+apps/desktop/                   Electron wrapper → macOS .dmg (see below)
+apps/mobile/                    Capacitor wrapper → Android .apk (see below)
+assets/icon/                    Source app icon (icon.svg) + generated .icns
+                                 and Android mipmap sets used by both wrappers
 ```
 
 Every feature folder follows the same internal shape: `components/`,
@@ -262,6 +268,87 @@ Next.js bundler's file tracing doesn't discover it (it's loaded via a
 dynamically-computed path), so the deployed function crashes with
 `PrismaClientInitializationError`. That plugin is the documented fix for
 exactly this pnpm-monorepo scenario.
+
+## Desktop and mobile apps
+
+`apps/desktop` (macOS) and `apps/mobile` (Android) are **not** separate
+copies of the app — they're thin native shells that open the exact same
+production URL (`https://yogapratishthan.vercel.app`) in a native window
+instead of a browser tab. There is no bundled web build and no local
+database inside either one, so there is nothing to keep in sync: the
+desktop app, the Android app, and the web link always show identical data
+because they're all hitting the same Neon database through the same API
+routes.
+
+| | Desktop | Mobile |
+|---|---|---|
+| Tooling | [Electron](https://electronjs.org) + electron-builder | [Capacitor](https://capacitorjs.com) |
+| Output | `.dmg` (universal — Intel + Apple Silicon) | `.apk` (debug-signed) |
+| Points at | `apps/desktop/main.js` → `APP_URL` constant | `apps/mobile/capacitor.config.ts` → `server.url` |
+| Icon | `assets/icon/icon.icns` | `assets/icon/android/mipmap-*` |
+
+### Building the macOS app
+
+```bash
+cd apps/desktop
+pnpm install
+pnpm exec electron-builder --mac dmg --universal
+# → apps/desktop/dist/Yogapratishthan-1.0.0-universal.dmg
+```
+
+The build machine needs Xcode Command Line Tools. `electron-builder` will
+auto-sign with any Developer ID certificate it finds in the local keychain;
+without one the app is unsigned (Gatekeeper will still allow it via
+right-click → Open). It is not notarized — that requires an Apple Developer
+account and is a separate, optional step (`electron-builder` supports it
+via `afterSign` + Apple ID credentials if you want a plain-double-click
+experience with no Gatekeeper prompt at all).
+
+### Building the Android app
+
+Needs a JDK and the Android SDK (`platform-tools`, `platforms;android-34`,
+`build-tools;34.0.0`) — install both once via Homebrew + `sdkmanager` if
+they're not already on the machine:
+
+```bash
+brew install openjdk@17
+brew install --cask android-commandlinetools
+export JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+export ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"
+yes | sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+```
+
+Then:
+
+```bash
+cd apps/mobile
+pnpm install
+pnpm exec cap sync android
+cd android && echo "sdk.dir=$ANDROID_HOME" > local.properties
+./gradlew assembleDebug
+# → apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+This produces a **debug-signed** APK — fine for sideloading directly onto a
+device ("install unknown apps" needs to be allowed for whichever app you
+use to open it), but not for the Play Store. For that, add a real release
+signing config and run `assembleRelease` instead.
+
+> **Installing the APK on a phone:** if the device says something like "you
+> may not have an app to open this," it's almost always how the file was
+> transferred, not the APK itself — some share sheets (WhatsApp, some cloud
+> drive apps) mangle the `.apk` association or don't grant install
+> permission to the app you opened it with. The most reliable path is
+> `adb install app-debug.apk` over USB, or downloading it directly from a
+> plain link in the phone's browser and opening it from the Downloads app.
+
+### Both wrappers share one icon
+
+`assets/icon/icon.svg` is the single source of truth. It's rendered to
+every required size with `rsvg-convert`, then packed into `icon.icns`
+(via macOS's `iconutil`) for desktop and into `mipmap-*dpi` PNGs for
+Android — regenerate both from the SVG if the icon ever changes, rather
+than hand-editing the generated files.
 
 ## Use cases — how the instructor actually uses this
 
