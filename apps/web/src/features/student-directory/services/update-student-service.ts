@@ -10,9 +10,9 @@ export class BatchNotFoundError extends Error {}
 export interface UpdateStudentInput {
   firstName: string;
   lastName: string;
-  dob: Date;
-  gender: Gender;
-  mobileNumber: string;
+  dob?: Date;
+  gender?: Gender;
+  mobileNumber?: string;
   whatsappNumber?: string;
   photoUrl?: string;
   healthIssues: HealthIssue[];
@@ -39,9 +39,9 @@ export async function updateStudent(studentId: string, input: UpdateStudentInput
       data: {
         firstName: input.firstName,
         lastName: input.lastName,
-        dob: input.dob,
-        gender: input.gender,
-        mobileNumber: input.mobileNumber,
+        dob: input.dob ?? null,
+        gender: input.gender ?? null,
+        mobileNumber: input.mobileNumber ?? null,
         whatsappNumber: input.whatsappNumber || null,
         photoUrl: input.photoUrl,
         healthIssues: input.healthIssues,

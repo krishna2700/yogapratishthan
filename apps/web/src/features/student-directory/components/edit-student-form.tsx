@@ -52,9 +52,9 @@ export function EditStudentForm({ studentId }: { studentId: string }) {
     reset({
       firstName: student.firstName,
       lastName: student.lastName,
-      dob: student.dob.toString().split("T")[0] as unknown as UpdateStudentFormInput["dob"],
-      gender: student.gender,
-      mobileNumber: student.mobileNumber,
+      dob: (student.dob ? student.dob.toString().split("T")[0] : "") as unknown as UpdateStudentFormInput["dob"],
+      gender: (student.gender ?? "") as unknown as UpdateStudentFormInput["gender"],
+      mobileNumber: student.mobileNumber ?? "",
       whatsappNumber: student.whatsappNumber ?? "",
       healthIssues: student.healthIssues,
       healthIssueDetails: student.healthIssueDetails ?? "",
@@ -74,7 +74,7 @@ export function EditStudentForm({ studentId }: { studentId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...values,
-          dob: new Date(values.dob).toISOString(),
+          dob: values.dob ? new Date(values.dob).toISOString() : undefined,
           photoUrl,
         }),
       });
@@ -124,10 +124,15 @@ export function EditStudentForm({ studentId }: { studentId: string }) {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <FieldWrapper htmlFor="dob" label="Date of birth" required error={errors.dob?.message}>
-            <Input id="dob" type="date" defaultValue={new Date(student.dob).toISOString().split("T")[0]} {...register("dob")} />
+          <FieldWrapper htmlFor="dob" label="Date of birth" hint="Optional" error={errors.dob?.message}>
+            <Input
+              id="dob"
+              type="date"
+              defaultValue={student.dob ? new Date(student.dob).toISOString().split("T")[0] : ""}
+              {...register("dob")}
+            />
           </FieldWrapper>
-          <FieldWrapper label="Gender" required error={errors.gender?.message}>
+          <FieldWrapper label="Gender" hint="Optional" error={errors.gender?.message}>
             <Controller
               name="gender"
               control={control}
@@ -150,7 +155,7 @@ export function EditStudentForm({ studentId }: { studentId: string }) {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <FieldWrapper htmlFor="mobileNumber" label="Mobile number" required error={errors.mobileNumber?.message}>
+          <FieldWrapper htmlFor="mobileNumber" label="Mobile number" hint="Optional" error={errors.mobileNumber?.message}>
             <Input id="mobileNumber" type="tel" {...register("mobileNumber")} />
           </FieldWrapper>
           <FieldWrapper htmlFor="whatsappNumber" label="WhatsApp number" error={errors.whatsappNumber?.message}>

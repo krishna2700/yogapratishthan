@@ -124,7 +124,9 @@ export function StudentCard({ student, onQuickAction }: StudentCardProps) {
 
       <div className="flex items-center justify-between border-t border-border/60 pt-3 text-xs">
         <span className="text-muted-foreground">Payment received</span>
-        <span className="font-medium text-foreground">{formatCurrency(student.paymentReceived.toString())}</span>
+        <span className="font-medium text-foreground">
+          {student.paymentReceived != null ? formatCurrency(student.paymentReceived.toString()) : "—"}
+        </span>
       </div>
     </div>
   );

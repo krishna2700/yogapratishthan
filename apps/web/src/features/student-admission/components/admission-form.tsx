@@ -54,14 +54,14 @@ export function AdmissionForm() {
         body: JSON.stringify({
           firstName: values.firstName,
           lastName: values.lastName,
-          dob: new Date(values.dob).toISOString(),
+          dob: values.dob ? new Date(values.dob).toISOString() : undefined,
           gender: values.gender,
           mobileNumber: values.mobileNumber,
           whatsappNumber: values.whatsappNumber || undefined,
           photoUrl,
           healthIssues: values.healthIssues,
           healthIssueDetails: values.healthIssueDetails || undefined,
-          joiningDate: new Date(values.joiningDate).toISOString(),
+          joiningDate: values.joiningDate ? new Date(values.joiningDate).toISOString() : undefined,
           paymentReceived: values.paymentReceived,
           numberOfSessions: values.numberOfSessions,
           batchId: values.batchId,
@@ -86,7 +86,9 @@ export function AdmissionForm() {
       toast.success(`${values.firstName} ${values.lastName} was admitted successfully`, {
         description: addAnother
           ? "Form cleared — ready for the next student."
-          : "Their session schedule has been generated.",
+          : values.numberOfSessions
+            ? "Their session schedule has been generated."
+            : "Add a number of sessions later (via Renew) to generate their schedule.",
       });
 
       if (addAnother) {

@@ -96,11 +96,15 @@ export function StudentDetail({ studentId }: { studentId: string }) {
               {student.batch.name} · {formatWeekdays(student.batch.weekdays)} · {student.batch.startTime}–
               {student.batch.endTime}
             </p>
-            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Phone className="size-3.5" />
-              {student.mobileNumber}
-            </p>
-            <p className="text-xs text-muted-foreground">Joined {format(new Date(student.joiningDate), "PP")}</p>
+            {student.mobileNumber && (
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Phone className="size-3.5" />
+                {student.mobileNumber}
+              </p>
+            )}
+            {student.joiningDate && (
+              <p className="text-xs text-muted-foreground">Joined {format(new Date(student.joiningDate), "PP")}</p>
+            )}
           </div>
         </div>
 
@@ -117,7 +121,12 @@ export function StudentDetail({ studentId }: { studentId: string }) {
             <Repeat className="size-3.5" />
             Renew
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setWhatsappOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!student.mobileNumber && !student.whatsappNumber}
+            onClick={() => setWhatsappOpen(true)}
+          >
             <MessageCircle className="size-3.5" />
             WhatsApp
           </Button>
@@ -139,7 +148,10 @@ export function StudentDetail({ studentId }: { studentId: string }) {
         <StatTile label="Completed" value={stats.completed} />
         <StatTile label="Remaining" value={stats.remaining} />
         <StatTile label="Total" value={stats.total} />
-        <StatTile label="Payment" value={formatCurrency(student.paymentReceived.toString())} />
+        <StatTile
+          label="Payment"
+          value={student.paymentReceived != null ? formatCurrency(student.paymentReceived.toString()) : "—"}
+        />
       </div>
 
       <Tabs defaultValue="sessions">

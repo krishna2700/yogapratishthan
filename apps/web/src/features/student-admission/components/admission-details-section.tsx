@@ -17,9 +17,8 @@ export function AdmissionDetailsSection({ form }: { form: AdmissionUseFormReturn
       <FieldWrapper
         htmlFor="joiningDate"
         label="Date of joining"
-        required
         error={errors.joiningDate?.message}
-        hint="The student's session schedule starts from this date"
+        hint="Optional — the student's session schedule starts from this date, if set"
       >
         <Input id="joiningDate" type="date" {...register("joiningDate")} />
       </FieldWrapper>
@@ -28,7 +27,7 @@ export function AdmissionDetailsSection({ form }: { form: AdmissionUseFormReturn
         <FieldWrapper
           htmlFor="paymentReceived"
           label="Payment received (₹)"
-          required
+          hint="Optional"
           error={errors.paymentReceived?.message}
         >
           <Input
@@ -45,7 +44,7 @@ export function AdmissionDetailsSection({ form }: { form: AdmissionUseFormReturn
         <FieldWrapper
           htmlFor="numberOfSessions"
           label="Number of sessions"
-          required
+          hint="Optional — leave blank to admit without a schedule yet"
           error={errors.numberOfSessions?.message}
         >
           <Input

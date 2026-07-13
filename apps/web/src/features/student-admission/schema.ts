@@ -12,19 +12,18 @@ const oldestValidDob = () => {
   return date;
 };
 
-/** Treats an empty string (from a not-yet-filled input) as "missing" so the
- *  usual required_error fires instead of a confusing coercion failure. */
-const blankToUndefined = (value: unknown) => (value === "" || value === null ? undefined : value);
-
-/** Zod v4's unified `error` callback: distinguishes a missing value from an
- *  invalid one so each gets its own friendly message. */
-const requiredOr = (requiredMessage: string, invalidMessage: string) => (issue: { input?: unknown }) =>
-  issue.input === undefined ? requiredMessage : invalidMessage;
+/** Treats an empty string (from a not-yet-filled input) as "missing" so it's
+ *  cleanly skipped by `.optional()` rather than failing coercion. */
+export const blankToUndefined = (value: unknown) => (value === "" || value === null ? undefined : value);
 
 /**
  * Fields shared by the client form and the API payload. Photo handling
  * differs between the two (File on the client, an uploaded URL on the
  * server) so it is layered on separately by each consumer.
+ *
+ * Only firstName, lastName, and batchId are mandatory — everything else can
+ * be filled in later (via edit, or a renewal once payment/session details
+ * are known).
  */
 export const studentBaseSchema = z
   .object({
@@ -33,15 +32,16 @@ export const studentBaseSchema = z
     dob: z.preprocess(
       blankToUndefined,
       z.coerce
-        .date({ error: requiredOr("Date of birth is required", "Enter a valid date of birth") })
+        .date({ error: "Enter a valid date of birth" })
         .max(new Date(), { message: "Date of birth cannot be in the future" })
-        .min(oldestValidDob(), { message: "Enter a valid date of birth" }),
+        .min(oldestValidDob(), { message: "Enter a valid date of birth" })
+        .optional(),
     ),
-    gender: z.enum(genderValues, { error: "Please select a gender" }),
-    mobileNumber: z
-      .string()
-      .trim()
-      .regex(MOBILE_REGEX, "Enter a valid 10-digit mobile number"),
+    gender: z.preprocess(blankToUndefined, z.enum(genderValues, { error: "Please select a gender" }).optional()),
+    mobileNumber: z.preprocess(
+      blankToUndefined,
+      z.string().trim().regex(MOBILE_REGEX, "Enter a valid 10-digit mobile number").optional(),
+    ),
     whatsappNumber: z
       .string()
       .trim()
@@ -52,24 +52,24 @@ export const studentBaseSchema = z
     healthIssueDetails: z.string().trim().max(1000).optional().or(z.literal("")),
     joiningDate: z.preprocess(
       blankToUndefined,
-      z.coerce.date({ error: requiredOr("Date of joining is required", "Enter a valid date of joining") }),
+      z.coerce.date({ error: "Enter a valid date of joining" }).optional(),
     ),
     paymentReceived: z.preprocess(
       blankToUndefined,
       z.coerce
-        .number({ error: requiredOr("Payment received is required", "Enter a valid amount") })
+        .number({ error: "Enter a valid amount" })
         .positive("Payment received must be greater than ₹0")
-        .max(10_000_000, "Enter a realistic payment amount"),
+        .max(10_000_000, "Enter a realistic payment amount")
+        .optional(),
     ),
     numberOfSessions: z.preprocess(
       blankToUndefined,
       z.coerce
-        .number({
-          error: requiredOr("Number of sessions is required", "Enter a valid number of sessions"),
-        })
+        .number({ error: "Enter a valid number of sessions" })
         .int("Sessions must be a whole number")
         .positive("Number of sessions must be greater than 0")
-        .max(1000, "Enter a realistic number of sessions"),
+        .max(1000, "Enter a realistic number of sessions")
+        .optional(),
     ),
     batchId: z.string().min(1, "Please assign a batch"),
   })

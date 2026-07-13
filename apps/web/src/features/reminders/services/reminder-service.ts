@@ -22,7 +22,7 @@ export interface Reminder {
   student?: {
     firstName: string;
     lastName: string;
-    mobileNumber: string;
+    mobileNumber: string | null;
     whatsappNumber: string | null;
   };
   remaining?: number;
@@ -55,7 +55,9 @@ export async function getReminders(): Promise<Reminder[]> {
       whatsappNumber: student.whatsappNumber,
     };
 
-    if (stats.remaining === 0) {
+    // A student with nothing purchased yet was never scheduled — that's
+    // not the same as a membership having run out.
+    if (stats.total > 0 && stats.remaining === 0) {
       reminders.push({
         id: `expired-${student.id}`,
         type: "MEMBERSHIP_EXPIRED",
@@ -65,7 +67,7 @@ export async function getReminders(): Promise<Reminder[]> {
         student: contact,
         remaining: stats.remaining,
       });
-    } else if (stats.remaining <= LOW_SESSIONS_THRESHOLD) {
+    } else if (stats.total > 0 && stats.remaining <= LOW_SESSIONS_THRESHOLD) {
       reminders.push({
         id: `low-${student.id}`,
         type: "LOW_SESSIONS",
@@ -77,16 +79,18 @@ export async function getReminders(): Promise<Reminder[]> {
       });
     }
 
-    const dob = new Date(student.dob);
-    if (dob.getUTCMonth() === todayMonth && dob.getUTCDate() === todayDate) {
-      reminders.push({
-        id: `birthday-${student.id}`,
-        type: "BIRTHDAY",
-        severity: "info",
-        message: `${name}'s birthday is today 🎂`,
-        studentId: student.id,
-        student: contact,
-      });
+    if (student.dob) {
+      const dob = new Date(student.dob);
+      if (dob.getUTCMonth() === todayMonth && dob.getUTCDate() === todayDate) {
+        reminders.push({
+          id: `birthday-${student.id}`,
+          type: "BIRTHDAY",
+          severity: "info",
+          message: `${name}'s birthday is today 🎂`,
+          studentId: student.id,
+          student: contact,
+        });
+      }
     }
   }
 

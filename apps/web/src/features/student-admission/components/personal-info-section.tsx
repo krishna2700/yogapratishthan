@@ -50,11 +50,11 @@ export function PersonalInfoSection({ form }: { form: AdmissionUseFormReturn }) 
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <FieldWrapper htmlFor="dob" label="Date of birth" required error={errors.dob?.message}>
+        <FieldWrapper htmlFor="dob" label="Date of birth" hint="Optional" error={errors.dob?.message}>
           <Input id="dob" type="date" max={new Date().toISOString().split("T")[0]} {...register("dob")} />
         </FieldWrapper>
 
-        <FieldWrapper label="Gender" required error={errors.gender?.message}>
+        <FieldWrapper label="Gender" hint="Optional" error={errors.gender?.message}>
           <Controller
             name="gender"
             control={control}
@@ -81,7 +81,7 @@ export function PersonalInfoSection({ form }: { form: AdmissionUseFormReturn }) 
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <FieldWrapper htmlFor="mobileNumber" label="Mobile number" required error={errors.mobileNumber?.message}>
+        <FieldWrapper htmlFor="mobileNumber" label="Mobile number" hint="Optional" error={errors.mobileNumber?.message}>
           <Input
             id="mobileNumber"
             type="tel"
@@ -111,7 +111,7 @@ export function PersonalInfoSection({ form }: { form: AdmissionUseFormReturn }) 
               <Checkbox
                 checked={whatsappSameAsMobile}
                 onCheckedChange={(checked) => {
-                  setValue("whatsappNumber", checked ? mobileNumber : "", { shouldValidate: true });
+                  setValue("whatsappNumber", checked ? (mobileNumber as string) : "", { shouldValidate: true });
                 }}
               />
               Same as mobile number

@@ -38,6 +38,7 @@ export async function getDashboardData() {
   let lowSessionsCount = 0;
   let expiredCount = 0;
   for (const stats of statsMap.values()) {
+    if (stats.total === 0) continue; // never scheduled, not "expired"
     if (stats.remaining === 0) expiredCount += 1;
     else if (stats.remaining <= LOW_SESSIONS_THRESHOLD) lowSessionsCount += 1;
   }

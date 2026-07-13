@@ -58,12 +58,13 @@ model Batch {
 model Student {
   id String @id @default(cuid())
 
-  // Personal information
+  // Personal information. Only firstName/lastName/batchId are truly
+  // required at admission — everything else here can be filled in later.
   firstName      String
   lastName       String
-  dob            DateTime
-  gender         Gender
-  mobileNumber   String
+  dob            DateTime?
+  gender         Gender?
+  mobileNumber   String?
   whatsappNumber String?
   photoUrl       String?
 
@@ -77,9 +78,11 @@ model Student {
   // live from Session rows, never stored as a counter. joiningDate is the
   // calendar date the student's session schedule starts from (not
   // necessarily the same day the admission was entered into the system).
-  joiningDate      DateTime @db.Date
-  paymentReceived  Decimal  @db.Decimal(10, 2)
-  numberOfSessions Int
+  // A student admitted without a session count/joining date simply has no
+  // sessions generated yet — added later via a renewal once that's known.
+  joiningDate      DateTime? @db.Date
+  paymentReceived  Decimal?  @db.Decimal(10, 2)
+  numberOfSessions Int?
 
   // Batch allocation (editable later)
   batchId String

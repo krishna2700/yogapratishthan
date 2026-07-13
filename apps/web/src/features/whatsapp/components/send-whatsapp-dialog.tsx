@@ -20,7 +20,7 @@ export interface WhatsAppTarget {
   id: string;
   firstName: string;
   lastName: string;
-  mobileNumber: string;
+  mobileNumber: string | null;
   whatsappNumber?: string | null;
 }
 
@@ -41,10 +41,10 @@ export function SendWhatsAppDialog({ student, remaining, defaultTemplate, onOpen
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.id]);
 
-  const phone = student ? student.whatsappNumber || student.mobileNumber : "";
+  const phone = student ? student.whatsappNumber || student.mobileNumber || "" : "";
 
   function handleSend() {
-    if (!student) return;
+    if (!student || !phone) return;
     window.open(toWhatsAppLink(phone, message), "_blank", "noopener,noreferrer");
     fetch(`/api/students/${student.id}/whatsapp`, {
       method: "POST",
@@ -62,29 +62,37 @@ export function SendWhatsAppDialog({ student, remaining, defaultTemplate, onOpen
           <DialogTitle>Send WhatsApp reminder</DialogTitle>
           {student && (
             <DialogDescription>
-              To {student.firstName} {student.lastName} · {phone}. Opens WhatsApp with this message ready — you
-              tap send there.
+              To {student.firstName} {student.lastName}
+              {phone ? ` · ${phone}` : ""}. Opens WhatsApp with this message ready — you tap send there.
             </DialogDescription>
           )}
         </DialogHeader>
 
-        <div className="flex flex-wrap gap-1.5">
-          {WHATSAPP_TEMPLATES.map((template) => (
-            <Badge
-              key={template.label}
-              variant="outline"
-              className="cursor-pointer select-none hover:bg-muted"
-              onClick={() => student && setMessage(template.build({ firstName: student.firstName, remaining }))}
-            >
-              {template.label}
-            </Badge>
-          ))}
-        </div>
+        {!phone ? (
+          <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+            No phone number on file for this student — add one from Edit before sending a WhatsApp reminder.
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-1.5">
+              {WHATSAPP_TEMPLATES.map((template) => (
+                <Badge
+                  key={template.label}
+                  variant="outline"
+                  className="cursor-pointer select-none hover:bg-muted"
+                  onClick={() => student && setMessage(template.build({ firstName: student.firstName, remaining }))}
+                >
+                  {template.label}
+                </Badge>
+              ))}
+            </div>
 
-        <Textarea rows={5} value={message} onChange={(e) => setMessage(e.target.value)} />
+            <Textarea rows={5} value={message} onChange={(e) => setMessage(e.target.value)} />
+          </>
+        )}
 
         <DialogFooter>
-          <Button disabled={!message.trim()} onClick={handleSend}>
+          <Button disabled={!message.trim() || !phone} onClick={handleSend}>
             <Send className="size-4" />
             Send via WhatsApp
           </Button>

@@ -40,15 +40,20 @@ export async function createStudent(input: CreateStudentInput) {
       include: { batch: true },
     });
 
-    await generateSessionsForStudent(tx, {
-      studentId: student.id,
-      batchId: batch.id,
-      weekdays: batch.weekdays,
-      startTime: batch.startTime,
-      endTime: batch.endTime,
-      count: input.numberOfSessions,
-      startDate: input.joiningDate,
-    });
+    // No session count yet (e.g. payment/schedule not decided at admission
+    // time) — skip schedule generation entirely; sessions can be added
+    // later via a renewal once that's known.
+    if (input.numberOfSessions) {
+      await generateSessionsForStudent(tx, {
+        studentId: student.id,
+        batchId: batch.id,
+        weekdays: batch.weekdays,
+        startTime: batch.startTime,
+        endTime: batch.endTime,
+        count: input.numberOfSessions,
+        startDate: input.joiningDate,
+      });
+    }
 
     await logEvent(
       {

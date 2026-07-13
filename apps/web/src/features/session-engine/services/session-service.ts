@@ -59,7 +59,7 @@ async function getPurchasedCount(studentId: string, client: Client): Promise<num
     select: { numberOfSessions: true, renewals: { select: { numberOfSessions: true } } },
   });
   if (!student) return 0;
-  return student.numberOfSessions + student.renewals.reduce((sum, r) => sum + r.numberOfSessions, 0);
+  return (student.numberOfSessions ?? 0) + student.renewals.reduce((sum, r) => sum + r.numberOfSessions, 0);
 }
 
 export async function getSessionStats(studentId: string, client: Client = prisma): Promise<SessionStats> {
@@ -83,7 +83,9 @@ export async function getSessionStats(studentId: string, client: Client = prisma
     remaining,
     absent,
     lost,
-    isExpired: remaining === 0,
+    // A student with nothing purchased yet was simply never scheduled —
+    // that's not the same as having used up a membership.
+    isExpired: purchased > 0 && remaining === 0,
     nextSessionDate: next?.scheduledDate ?? null,
   };
 }
