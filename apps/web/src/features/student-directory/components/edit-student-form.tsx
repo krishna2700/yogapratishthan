@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
-import { Loader2, Save, User, HeartPulse, CalendarClock } from "lucide-react";
+import { Loader2, Save, User, HeartPulse, CalendarClock, ClipboardList } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ export function EditStudentForm({ studentId }: { studentId: string }) {
   const form = useForm<UpdateStudentFormInput, unknown, UpdateStudentSchemaInput>({
     resolver: standardSchemaResolver(updateStudentSchema),
   });
-  const { register, control, handleSubmit, watch, reset, formState: { errors } } = form;
+  const { register, control, handleSubmit, watch, reset, setError, formState: { errors } } = form;
 
   useEffect(() => {
     if (!student) return;
@@ -58,6 +58,13 @@ export function EditStudentForm({ studentId }: { studentId: string }) {
       whatsappNumber: student.whatsappNumber ?? "",
       healthIssues: student.healthIssues,
       healthIssueDetails: student.healthIssueDetails ?? "",
+      joiningDate: (student.joiningDate
+        ? student.joiningDate.toString().split("T")[0]
+        : "") as unknown as UpdateStudentFormInput["joiningDate"],
+      paymentReceived: (student.paymentReceived != null
+        ? student.paymentReceived.toString()
+        : "") as unknown as UpdateStudentFormInput["paymentReceived"],
+      numberOfSessions: (student.numberOfSessions ?? "") as unknown as UpdateStudentFormInput["numberOfSessions"],
       batchId: student.batchId,
     });
   }, [student, reset]);
@@ -75,11 +82,17 @@ export function EditStudentForm({ studentId }: { studentId: string }) {
         body: JSON.stringify({
           ...values,
           dob: values.dob ? new Date(values.dob).toISOString() : undefined,
+          joiningDate: values.joiningDate ? new Date(values.joiningDate).toISOString() : undefined,
           photoUrl,
         }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+        const body: { error?: string; fieldErrors?: Record<string, string[]> } = await res.json().catch(() => ({}));
+        if (body.fieldErrors) {
+          for (const [field, messages] of Object.entries(body.fieldErrors)) {
+            setError(field as keyof UpdateStudentSchemaInput, { message: messages[0] });
+          }
+        }
         throw new Error(body.error ?? "Could not save changes");
       }
       toast.success("Student updated");
@@ -194,6 +207,41 @@ export function EditStudentForm({ studentId }: { studentId: string }) {
             <Textarea id="healthIssueDetails" rows={3} {...register("healthIssueDetails")} />
           </FieldWrapper>
         )}
+      </FormSection>
+
+      <FormSection icon={ClipboardList} title="Admission Details">
+        <FieldWrapper
+          htmlFor="joiningDate"
+          label="Date of joining"
+          hint="Optional"
+          error={errors.joiningDate?.message}
+        >
+          <Input id="joiningDate" type="date" {...register("joiningDate")} />
+        </FieldWrapper>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FieldWrapper
+            htmlFor="paymentReceived"
+            label="Payment received (₹)"
+            hint="Optional"
+            error={errors.paymentReceived?.message}
+          >
+            <Input id="paymentReceived" type="number" inputMode="decimal" min={0} step="0.01" {...register("paymentReceived")} />
+          </FieldWrapper>
+
+          <FieldWrapper
+            htmlFor="numberOfSessions"
+            label="Number of sessions"
+            hint={
+              student.numberOfSessions != null
+                ? "Increasing adds sessions; decreasing removes upcoming ones (not already-attended ones)"
+                : "Optional — filling this in generates their session schedule"
+            }
+            error={errors.numberOfSessions?.message}
+          >
+            <Input id="numberOfSessions" type="number" inputMode="numeric" min={1} step="1" {...register("numberOfSessions")} />
+          </FieldWrapper>
+        </div>
       </FormSection>
 
       <FormSection icon={CalendarClock} title="Batch Allocation" description="Changing batches reschedules remaining sessions">

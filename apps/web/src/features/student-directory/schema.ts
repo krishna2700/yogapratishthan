@@ -26,6 +26,27 @@ export const updateStudentSchema = z
     photoUrl: z.string().min(1).optional(),
     healthIssues: z.array(z.enum(HEALTH_ISSUE_VALUES)).default([]),
     healthIssueDetails: z.string().trim().max(1000).optional().or(z.literal("")),
+    joiningDate: z.preprocess(blankToUndefined, z.coerce.date({ error: "Enter a valid date of joining" }).optional()),
+    paymentReceived: z.preprocess(
+      blankToUndefined,
+      z.coerce
+        .number({ error: "Enter a valid amount" })
+        .positive("Payment received must be greater than ₹0")
+        .max(10_000_000, "Enter a realistic payment amount")
+        .optional(),
+    ),
+    // Only settable while still null — see updateStudent(): once a student
+    // has a schedule, adding more sessions goes through Renew instead, so
+    // the "Total" stat always matches what was actually generated.
+    numberOfSessions: z.preprocess(
+      blankToUndefined,
+      z.coerce
+        .number({ error: "Enter a valid number of sessions" })
+        .int("Sessions must be a whole number")
+        .positive("Number of sessions must be greater than 0")
+        .max(1000, "Enter a realistic number of sessions")
+        .optional(),
+    ),
     batchId: z.string().min(1, "Please assign a batch"),
   })
   .superRefine((data, ctx) => {

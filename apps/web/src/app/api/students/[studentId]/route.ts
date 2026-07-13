@@ -4,6 +4,7 @@ import { getStudentDirectoryEntry } from "@/features/student-directory/services/
 import { updateStudentSchema } from "@/features/student-directory/schema";
 import {
   BatchNotFoundError,
+  SessionCountTooLowError,
   StudentNotFoundError,
   updateStudent,
 } from "@/features/student-directory/services/update-student-service";
@@ -35,6 +36,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ st
   } catch (error) {
     if (error instanceof StudentNotFoundError) return jsonError(error.message, 404);
     if (error instanceof BatchNotFoundError) return jsonError(error.message, 422, { batchId: [error.message] });
+    if (error instanceof SessionCountTooLowError) {
+      return jsonError(error.message, 422, { numberOfSessions: [error.message] });
+    }
     throw error;
   }
 }
