@@ -5,7 +5,9 @@ import {
   CalendarSync,
   CheckCircle2,
   Clock,
+  FileText,
   MessageCircle,
+  Pencil,
   Repeat,
   ShieldAlert,
   StickyNote,
@@ -31,4 +33,6 @@ export const EVENT_DISPLAY: Record<EventType, { label: string; icon: LucideIcon 
   LOW_SESSIONS: { label: "Running low", icon: TrendingDown },
   NOTE_ADDED: { label: "Note added", icon: StickyNote },
   WHATSAPP_SENT: { label: "WhatsApp sent", icon: MessageCircle },
+  ADMISSION_REQUEST_RECEIVED: { label: "New admission request", icon: FileText },
+  STUDENT_SELF_EDITED: { label: "Edited their own info", icon: Pencil },
 };

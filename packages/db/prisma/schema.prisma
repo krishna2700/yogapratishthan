@@ -88,17 +88,68 @@ model Student {
   batchId String
   batch   Batch  @relation(fields: [batchId], references: [id], onDelete: Restrict)
 
+  // Identity document, uploaded either at public admission or later by the
+  // admin. Same optional-upload treatment as photoUrl.
+  aadharUrl String?
+
+  // When set, the student can self-edit their Personal/Health info at
+  // /edit/{token} without any admin login. Null means no active link.
+  // Regenerating replaces the value, which invalidates any previously
+  // shared link.
+  editAccessToken String? @unique
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sessions Session[]
-  notes    Note[]
-  renewals Renewal[]
-  events   Event[]
+  sessions         Session[]
+  notes            Note[]
+  renewals         Renewal[]
+  events           Event[]
+  studentVacations StudentVacation[]
+  admissionRequest AdmissionRequest?
 
   @@index([batchId])
   @@index([createdAt])
   @@map("students")
+}
+
+enum AdmissionRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+/// A self-submitted application from the public /apply form. Only covers
+/// Personal Information + Health Information — batch assignment and
+/// admission details (payment, session count, joining date) are always
+/// filled in by the admin at accept time, never by the applicant.
+model AdmissionRequest {
+  id String @id @default(cuid())
+
+  firstName          String
+  lastName           String
+  dob                DateTime
+  gender             Gender
+  mobileNumber       String
+  whatsappNumber     String
+  photoUrl           String?
+  aadharUrl          String?
+  healthIssues       HealthIssue[]
+  healthIssueDetails String?
+
+  status     AdmissionRequestStatus @default(PENDING)
+  reviewNote String?
+
+  // Set once accepted, pointing at the Student it became.
+  studentId String?  @unique
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("admission_requests")
 }
 
 enum SessionStatus {
@@ -178,6 +229,25 @@ model Vacation {
   @@map("vacations")
 }
 
+/// A vacation for a single student only (as opposed to Vacation, which
+/// closes every batch). Entered by the admin on that student's own card —
+/// e.g. after the student requests time off informally. Reschedules just
+/// that student's sessions in the affected range, the same way a
+/// center-wide Vacation does for everyone.
+model StudentVacation {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  reason    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@map("student_vacations")
+}
+
 enum NoteCategory {
   GENERAL
   HEALTH
@@ -229,6 +299,8 @@ enum EventType {
   LOW_SESSIONS
   NOTE_ADDED
   WHATSAPP_SENT
+  ADMISSION_REQUEST_RECEIVED
+  STUDENT_SELF_EDITED
 }
 
 /// Append-only activity log. Every notable thing that happens writes one of

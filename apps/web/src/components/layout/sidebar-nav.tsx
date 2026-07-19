@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { usePendingAdmissionRequestsCount } from "@/features/admission-requests/hooks/use-pending-count";
 import { NAV_LINKS } from "./nav-links";
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const pendingCount = usePendingAdmissionRequestsCount();
 
   return (
     <nav className="flex flex-col gap-0.5">
@@ -26,6 +28,11 @@ export function SidebarNav() {
           >
             <Icon className="size-4" />
             {link.label}
+            {link.href === "/admission-requests" && pendingCount > 0 && (
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground">
+                {pendingCount > 9 ? "9+" : pendingCount}
+              </span>
+            )}
           </Link>
         );
       })}

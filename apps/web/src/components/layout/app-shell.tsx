@@ -2,14 +2,32 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Menu, Plus } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LogOut, Menu, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import { SidebarNav } from "./sidebar-nav";
 
+const CHROMELESS_PREFIXES = ["/apply", "/edit/", "/login"];
+const CHROMELESS_SUFFIXES = ["/print"];
+
 export function AppShell({ children }: { children: ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const isChromeless =
+    CHROMELESS_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix)) ||
+    CHROMELESS_SUFFIXES.some((suffix) => pathname.endsWith(suffix));
+
+  if (isChromeless) return <>{children}</>;
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -43,6 +61,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button size="sm" className="md:hidden" nativeButton={false} render={<Link href="/students/new" />}>
               <Plus className="size-4" />
               Add
+            </Button>
+            <Button variant="ghost" size="icon" aria-label="Sign out" onClick={logout}>
+              <LogOut className="size-4" />
             </Button>
           </div>
         </header>

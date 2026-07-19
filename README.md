@@ -1,9 +1,12 @@
 # Yogapratishthan — Iyengar Yoga Center Management System
 
-An internal admin tool that replaces the paper admission register and attendance
-book for a single-instructor yoga studio. Students never see this app — it's
-built for one person: the instructor, running the whole center from a phone
-or tablet between classes.
+An admin tool that replaces the paper admission register and attendance book
+for a single-instructor yoga studio. Built primarily for one person — the
+instructor, running the whole center from a phone or tablet between classes —
+with one deliberate public surface: a self-service admission form (`/apply`)
+students fill in themselves, which lands in an admin inbox for review.
+Everything else (the student list, attendance, vacations, reminders) sits
+behind a login.
 
 **Live:** https://yogapratishthan.vercel.app
 **Repo:** https://github.com/krishna2700/yogapratishthan
@@ -16,6 +19,7 @@ or tablet between classes.
 - [Architecture](#architecture)
 - [The Session Engine](#the-session-engine-the-part-that-matters)
 - [Data model](#data-model)
+- [Authentication](#authentication)
 - [Project structure](#project-structure)
 - [Local development](#local-development)
 - [Deployment](#deployment)
@@ -31,19 +35,38 @@ Every class an instructor teaches, every student's attendance, every make-up
 class, every holiday closure, every renewal — all of it used to live in a
 physical register. This app digitizes that whole workflow:
 
-- **Admission** — enter a new student's details once; the app generates their
-  entire session schedule automatically (e.g. "12 sessions, Mon & Thu" becomes
-  12 actual calendar dates).
-- **Attendance** — a classroom view showing only today's students, one tap to
-  mark present/absent.
+- **Public admission form** (`/apply`) — a prospective student fills in their
+  own Personal + Health Information (plus an optional photo and Aadhar card)
+  from any device, no login required. It lands as a pending **Admission
+  Request** for the instructor to review.
+- **Admission Requests inbox** — the instructor reviews a submission, assigns
+  a batch, and fills in payment/session details to complete the admission —
+  at which point the app generates the student's entire session schedule
+  automatically (e.g. "12 sessions, Mon & Thu" becomes 12 actual calendar
+  dates). Admins can also admit a student directly without going through
+  `/apply`.
+- **Edit-access delegation** — the instructor can generate a one-off link
+  (`/edit/{token}`) that lets a specific student update their own Personal +
+  Health Information — never their batch, payment, or sessions — or just edit
+  it herself from the student's profile.
+- **Document export** — download a student's full submitted form, including
+  their Aadhar card, as a clean printable page (browser "Print → Save as
+  PDF").
+- **Attendance register** (`/attendance`) — a spreadsheet-style register per
+  batch: pick a month from the sidebar, see every student who had a class
+  that month as a row and every class date as a column, and mark
+  present/absent/vacation directly in the grid — no more opening students one
+  at a time.
 - **Make-ups** — add a make-up class for a missed session; it auto-expires
   after 2 months if unused.
-- **Vacations** — declare a center closure (Diwali, maintenance, etc.) and
-  every affected session automatically reschedules to the next valid class —
-  no student loses a session, and no manual per-student work.
+- **Vacations** — declare a center-wide closure (Diwali, maintenance, etc.)
+  *or* a single student's individual time off from their own profile —
+  either way, every affected session automatically reschedules to the next
+  valid class. No student loses a session, and no manual per-student work.
 - **Reminders & notifications** — low sessions, expired memberships, expiring
-  make-ups, birthdays, and consecutive absences surface automatically, with a
-  one-tap WhatsApp reminder you can send straight from the app.
+  make-ups, birthdays, consecutive absences, and new admission requests
+  surface automatically, with a one-tap WhatsApp reminder you can send
+  straight from the app.
 - **Renewals** — extend a student's schedule with another batch of sessions
   that continues seamlessly from where they left off.
 
@@ -141,14 +164,19 @@ landing on Sunday) — see git history if you're curious.
 ## Data model
 
 ```
-Batch           A recurring class slot (weekdays, start/end time). Seeded once.
-Student         Personal + admission info. joiningDate anchors the schedule start.
-Session         The source of truth — see above.
-Renewal         A subsequent purchase of sessions.
-Vacation        A center-wide closure (start date, end date, reason).
-Note            Freeform notes on a student (health, scheduling, payment, etc.)
-Event           Append-only activity log — powers both the student Timeline
-                and the notification bell. Every notable action writes one.
+Batch             A recurring class slot (weekdays, start/end time). Seeded once.
+Student           Personal + admission info. joiningDate anchors the schedule start.
+                  aadharUrl + editAccessToken support the two features below.
+Session           The source of truth — see above.
+Renewal           A subsequent purchase of sessions.
+Vacation          A center-wide closure (start date, end date, reason).
+StudentVacation   Same shape as Vacation, scoped to one student — entered on
+                  their profile, reschedules only their sessions.
+AdmissionRequest  A public /apply submission awaiting admin review (PENDING /
+                  ACCEPTED / REJECTED). Becomes a Student once accepted.
+Note              Freeform notes on a student (health, scheduling, payment, etc.)
+Event             Append-only activity log — powers both the student Timeline
+                  and the notification bell. Every notable action writes one.
 ```
 
 The `Event` model is deliberately the single hook point for anything
@@ -158,21 +186,48 @@ instead of each inventing their own mechanism.
 
 Full schema: `packages/db/prisma/schema.prisma`.
 
+## Authentication
+
+Single shared admin password — no per-user accounts, matching the
+single-instructor scale of the rest of the app. `apps/web/src/middleware.ts`
+blocks every route except an explicit public allowlist
+(`/apply`, `/edit/{token}`, `/login`, and the API routes those pages call)
+behind a signed session cookie. Logging in at `/login` checks the submitted
+password against `ADMIN_PASSWORD` and sets an HMAC-signed cookie
+(`apps/web/src/lib/admin-session.ts`, Web Crypto `crypto.subtle` so it works
+in either an Edge or Node middleware runtime — no session store, no extra
+dependency). There's deliberately no user table: change the password by
+updating `ADMIN_PASSWORD` in Vercel.
+
+Student self-edit links (`/edit/{token}`) are a *separate*, narrower
+mechanism — a random per-student token (`Student.editAccessToken`, generated
+from the student's profile) that only ever unlocks that one student's
+Personal + Health Information, never batch/payment/session fields, and
+never grants access to anything else in the app.
+
 ## Project structure
 
 ```
 apps/web/src/
+├── middleware.ts               Admin auth gate — see Authentication below
 ├── app/                        Next.js App Router
-│   ├── (pages)                 /, /students, /students/[id], /students/[id]/edit,
-│   │                           /students/new, /attendance, /vacations, /reminders
+│   ├── (admin pages)           /, /students, /students/[id], /students/[id]/edit,
+│   │                           /students/[id]/print, /students/new, /attendance,
+│   │                           /vacations, /reminders, /admission-requests
+│   ├── apply/                  Public admission form — no login
+│   ├── edit/[token]/           Public student self-edit — token-gated, no login
+│   ├── login/                  Admin sign-in
 │   └── api/                    Thin route handlers — one per feature, see below
 ├── features/                   Feature-based modules — the bulk of the app
-│   ├── student-admission/      Admission form, its Zod schema, photo upload
-│   ├── student-directory/      Card grid, student detail page, edit, delete
+│   ├── student-admission/      Admin's quick-add admission form, photo upload
+│   ├── admission-requests/     Public /apply form + admin review/accept/reject
+│   ├── student-directory/      Card grid, student detail page, edit, delete,
+│   │                           edit-access delegation, per-student vacations
 │   ├── session-engine/         Schedule generation, attendance, make-ups,
 │   │                           vacations, renewals — the core described above
-│   ├── attendance/             Today's classroom view
-│   ├── vacations/              Vacation CRUD UI
+│   ├── attendance/             The attendance register (batch tabs, month
+│   │                           sidebar, student × date grid)
+│   ├── vacations/              Center-wide vacation CRUD UI
 │   ├── notes/                  Per-student notes
 │   ├── notifications/          Event log, notification bell, timeline
 │   ├── reminders/              Computed (not stored) live reminders
@@ -181,9 +236,10 @@ apps/web/src/
 ├── components/
 │   ├── ui/                     shadcn/ui primitives (generated, not hand-rolled)
 │   ├── form/                   Shared form field wrapper
-│   └── layout/                 App shell, sidebar nav
+│   └── layout/                 App shell, sidebar nav — skips its own chrome
+│                                on /apply, /edit/*, /login, and print pages
 └── lib/                        Cross-cutting utilities (calendar-date, weekday
-                                 formatting, API response helpers)
+                                 formatting, API response helpers, admin-session)
 
 packages/db/
 ├── prisma/schema.prisma        The whole data model
@@ -248,16 +304,17 @@ pnpm db:studio     # Prisma Studio — browse the database visually
 
 ## Deployment
 
-Deployed on Vercel, database on Neon, photos on Vercel Blob. The only two
-environment variables the app needs in production:
+Deployed on Vercel, database on Neon, photos + Aadhar uploads on Vercel Blob.
+Environment variables the app needs in production:
 
 | Variable | Purpose | Where it comes from |
 |---|---|---|
 | `DATABASE_URL` | Postgres connection | Neon dashboard → connection string |
-| `BLOB_READ_WRITE_TOKEN` | Photo storage | Auto-injected once a Blob store is linked to the Vercel project |
+| `BLOB_READ_WRITE_TOKEN` | Photo/document storage | Auto-injected once a Blob store is linked to the Vercel project |
+| `ADMIN_PASSWORD` | Admin login | Set it yourself — see [Authentication](#authentication) |
+| `ADMIN_SESSION_SECRET` | Signs the admin session cookie | Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
 
-Nothing else — there's no auth system (single internal user, no accounts) and
-the WhatsApp feature uses a zero-credential `wa.me` deep link rather than the
+The WhatsApp feature uses a zero-credential `wa.me` deep link rather than the
 Meta Business API, so it needs no key.
 
 **Monorepo-on-Vercel specifics**, if you're setting this up fresh: the
@@ -352,16 +409,33 @@ than hand-editing the generated files.
 
 ## Use cases — how the instructor actually uses this
 
-**Admitting a new student** (`/students/new`): fill in personal info, health
-history, payment + number of sessions, pick a batch. Photo is optional. On
-save, the app generates every session date up front from the joining date —
-"Save & Add Another" clears the form and refocuses the first field so the
-next admission starts immediately, no navigation required.
+**A student self-admits** (`/apply`, shared as a link — e.g. a QR code at the
+studio): they fill in Personal + Health Information themselves (photo and
+Aadhar card optional, everything else required) and submit. It shows up
+under **Admission Requests** for the instructor.
 
-**Taking attendance** (`/attendance`): shows only today's batch(es) — if two
-batches meet today at different times, a switcher lets the instructor pick
-which one they're currently teaching. Large tap targets, present/absent in
-one tap, saves instantly.
+**Reviewing an admission request**: open the request, see everything the
+student submitted (including their Aadhar card), assign a batch, and
+optionally fill in payment/joining date/session count — "Accept" creates the
+student and generates their session schedule in one action. "Reject" declines
+it with an optional note. The instructor can still admit someone directly at
+`/students/new` without going through `/apply` at all.
+
+**Letting a student fix their own details**: from a student's profile,
+"Edit access" generates a link the instructor can send via WhatsApp — the
+student can update their own Personal/Health info (never batch, payment, or
+sessions) until the instructor revokes it or generates a new link, which
+invalidates the old one.
+
+**Downloading a student's form**: "Download Form" on their profile opens a
+clean printable page with every field plus their photo and Aadhar card —
+"Print → Save as PDF" from there produces a file.
+
+**Taking attendance** (`/attendance`): a register per batch — pick the batch
+from the tabs, pick a month from the sidebar, and every student who had a
+class that month shows as a row with each class date as a column. Click a
+past or today's cell to mark present/absent; vacation days show automatically
+as "V". No more opening students one at a time.
 
 **A student misses class**: mark them absent (with an optional reason).
 From their profile, "Add Make-up" schedules a replacement class — reason is
@@ -374,6 +448,10 @@ next valid class day — this happens for every affected student across the
 whole center in one action. Editing or deleting a vacation later correctly
 un-does the reschedule wherever it's still safe to (i.e. the replacement
 session hasn't been attended yet).
+
+**One student needs time off**: from that student's profile → Vacations tab,
+add the same date range and reason — only their sessions shift, the rest of
+the batch is untouched. Same safe-revert behavior as a center-wide vacation.
 
 **A student is running low on sessions**: the moment their remaining count
 crosses 3, 2, or 1, a notification appears in the bell automatically — no
@@ -395,9 +473,12 @@ class — not from today, so an early renewal doesn't create a scheduling gap.
 - **Vacation revert is best-effort.** If a session's replacement has already
   been attended, deleting or editing the vacation leaves it as-is rather than
   rewriting attendance history. This is the correct trade-off, not a bug.
-- **No auth.** This is a single-instructor internal tool; there's no login
-  system. If multiple staff ever need separate accounts, that's a real
-  addition, not a toggle.
+- **One shared admin password, not per-user accounts.** Fine for a
+  single-instructor studio; if multiple staff ever need separate logins or
+  permission levels, that's a real addition, not a toggle.
+- **Document export is print-to-PDF, not a generated file.** `/students/[id]/print`
+  is a clean printable page — the browser's own "Print → Save as PDF" produces
+  the file. No PDF-generation library running on the server.
 - **Reminders are computed, not stored.** The Reminders page always reflects
   live state (no stale cached reminder rows to clean up), but that means it
   recomputes from scratch on every load rather than being instant. Fine at

@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
+  CalendarOff,
   CalendarPlus,
+  Download,
+  Link2,
   MessageCircle,
   MoreVertical,
   Pencil,
@@ -36,6 +39,8 @@ import { formatCurrency, initialsOf } from "../lib/format";
 import { useStudent } from "../hooks/use-student";
 import { RenewDialog } from "./renew-dialog";
 import { DeleteStudentDialog } from "./delete-student-dialog";
+import { EditAccessDialog } from "./edit-access-dialog";
+import { StudentVacationsPanel } from "./student-vacations-panel";
 
 export function StudentDetail({ studentId }: { studentId: string }) {
   const router = useRouter();
@@ -44,6 +49,7 @@ export function StudentDetail({ studentId }: { studentId: string }) {
   const [renewOpen, setRenewOpen] = useState(false);
   const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editAccessOpen, setEditAccessOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   function reloadEverything() {
@@ -124,6 +130,15 @@ export function StudentDetail({ studentId }: { studentId: string }) {
           <Button
             variant="outline"
             size="sm"
+            nativeButton={false}
+            render={<Link href={`/students/${student.id}/print`} target="_blank" />}
+          >
+            <Download className="size-3.5" />
+            Download Form
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             disabled={!student.mobileNumber && !student.whatsappNumber}
             onClick={() => setWhatsappOpen(true)}
           >
@@ -135,6 +150,10 @@ export function StudentDetail({ studentId }: { studentId: string }) {
               <MoreVertical className="size-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditAccessOpen(true)}>
+                <Link2 />
+                Edit access
+              </DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
                 <Trash2 />
                 Delete Student
@@ -166,6 +185,10 @@ export function StudentDetail({ studentId }: { studentId: string }) {
             <StickyNote className="size-3.5" />
             Notes
           </TabsTrigger>
+          <TabsTrigger value="vacations">
+            <CalendarOff className="size-3.5" />
+            Vacations
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="sessions" className="pt-4">
           <SessionsPanel studentId={student.id} refreshKey={refreshKey} onChange={reloadEverything} />
@@ -178,6 +201,9 @@ export function StudentDetail({ studentId }: { studentId: string }) {
         </TabsContent>
         <TabsContent value="notes" className="pt-4">
           <NotesPanel studentId={student.id} />
+        </TabsContent>
+        <TabsContent value="vacations" className="pt-4">
+          <StudentVacationsPanel studentId={student.id} />
         </TabsContent>
       </Tabs>
 
@@ -201,6 +227,12 @@ export function StudentDetail({ studentId }: { studentId: string }) {
         student={deleteOpen ? student : null}
         onOpenChange={setDeleteOpen}
         onDeleted={() => router.push("/students")}
+      />
+      <EditAccessDialog
+        studentId={editAccessOpen ? student.id : null}
+        editAccessToken={student.editAccessToken}
+        onOpenChange={setEditAccessOpen}
+        onChanged={reload}
       />
     </div>
   );
