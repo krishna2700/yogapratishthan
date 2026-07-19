@@ -1,8 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { put } from "@vercel/blob";
+import { saveFile } from "@/lib/file-storage";
 import { ACCEPTED_PHOTO_TYPES, MAX_PHOTO_SIZE_BYTES } from "../constants";
 
 export class InvalidPhotoError extends Error {}
@@ -25,39 +23,8 @@ function validatePhoto(file: File) {
   }
 }
 
-/**
- * Vercel's filesystem is ephemeral and read-only in production, so local
- * disk storage only works for local dev. When a Blob store is linked
- * (BLOB_READ_WRITE_TOKEN present) we upload there instead; on Vercel
- * without that token we fail loudly rather than silently losing photos.
- */
 export async function savePhoto(file: File): Promise<string> {
   validatePhoto(file);
-
   const extension = EXTENSION_BY_TYPE[file.type as (typeof ACCEPTED_PHOTO_TYPES)[number]];
-  const filename = `${randomUUID()}.${extension}`;
-
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const blob = await put(`uploads/${filename}`, file, {
-      access: "public",
-      addRandomSuffix: false,
-    });
-    return blob.url;
-  }
-
-  if (process.env.VERCEL) {
-    throw new Error(
-      "Photo storage isn't configured for this deployment. Add a Blob store in the Vercel dashboard and set BLOB_READ_WRITE_TOKEN.",
-    );
-  }
-
-  return saveToLocalDisk(file, filename);
-}
-
-async function saveToLocalDisk(file: File, filename: string): Promise<string> {
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadDir, { recursive: true });
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, filename), buffer);
-  return `/uploads/${filename}`;
+  return saveFile(file, `${randomUUID()}.${extension}`, file.type);
 }

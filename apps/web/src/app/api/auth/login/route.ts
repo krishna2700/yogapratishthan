@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-response";
 import { ADMIN_SESSION_COOKIE, createSessionToken } from "@/lib/admin-session";
+import { isValidAdminPassword } from "@/features/admin-auth/services/admin-credential-service";
 
 export async function POST(request: Request) {
   const body: { password?: string } = await request.json().catch(() => ({}));
 
-  if (!body.password || body.password !== process.env.ADMIN_PASSWORD) {
+  if (!body.password || !(await isValidAdminPassword(body.password))) {
     return jsonError("Incorrect password", 401);
   }
 

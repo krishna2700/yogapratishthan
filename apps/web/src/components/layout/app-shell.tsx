@@ -3,13 +3,14 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Menu, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { KeyRound, LogOut, Menu, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import { SidebarNav } from "./sidebar-nav";
 
-const CHROMELESS_PREFIXES = ["/apply", "/edit/", "/login"];
+const CHROMELESS_PREFIXES = ["/apply", "/edit/", "/login", "/reset-password"];
 const CHROMELESS_SUFFIXES = ["/print"];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -27,6 +28,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
+  }
+
+  async function changePassword() {
+    await fetch("/api/auth/request-password-reset", { method: "POST" });
+    toast.success("Password reset email sent — check the admin inbox this app notifies.");
   }
 
   return (
@@ -61,6 +67,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button size="sm" className="md:hidden" nativeButton={false} render={<Link href="/students/new" />}>
               <Plus className="size-4" />
               Add
+            </Button>
+            <Button variant="ghost" size="icon" aria-label="Change password" onClick={changePassword}>
+              <KeyRound className="size-4" />
             </Button>
             <Button variant="ghost" size="icon" aria-label="Sign out" onClick={logout}>
               <LogOut className="size-4" />

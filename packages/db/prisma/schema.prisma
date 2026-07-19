@@ -216,6 +216,21 @@ model Session {
   @@map("sessions")
 }
 
+/// Singleton row (id is always "singleton") holding the admin login
+/// password. Starts out unset — the login route falls back to the
+/// ADMIN_PASSWORD env var as a bootstrap password until the first
+/// email-verified password change creates this row, after which the env var
+/// is ignored and this becomes the only source of truth.
+model AdminCredential {
+  id                String    @id @default("singleton")
+  passwordHash      String?
+  resetToken        String?   @unique
+  resetTokenExpires DateTime?
+  updatedAt         DateTime  @updatedAt
+
+  @@map("admin_credentials")
+}
+
 /// Center-wide closure (holiday, maintenance, admin vacation). Not tied to a
 /// specific student or batch — every batch pauses for the range.
 model Vacation {

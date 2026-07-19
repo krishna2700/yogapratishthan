@@ -13,6 +13,18 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
+  async function handleForgotPassword() {
+    setIsSendingReset(true);
+    try {
+      await fetch("/api/auth/request-password-reset", { method: "POST" });
+      setResetSent(true);
+    } finally {
+      setIsSendingReset(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,6 +72,21 @@ function LoginForm() {
           {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
           Sign in
         </Button>
+
+        {resetSent ? (
+          <p className="text-center text-xs text-muted-foreground">
+            If email is configured, a reset link was sent — check the inbox this app is set up to notify.
+          </p>
+        ) : (
+          <button
+            type="button"
+            disabled={isSendingReset}
+            onClick={handleForgotPassword}
+            className="text-center text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:opacity-50"
+          >
+            {isSendingReset ? "Sending…" : "Forgot password?"}
+          </button>
+        )}
       </form>
     </div>
   );

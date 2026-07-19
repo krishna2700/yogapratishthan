@@ -94,8 +94,8 @@ feature reaches the database exclusively through a `services/*.ts` file.
 | Forms | React Hook Form + Zod (one schema, shared by client and API) |
 | Database | PostgreSQL (Neon in production) |
 | ORM | Prisma 6 |
-| File storage | Vercel Blob (production) / local disk (dev) |
-| Hosting | Vercel |
+| File storage | Cloudflare R2 (production) / local disk (dev) — Vercel Blob also supported |
+| Hosting | Render (also deployable to Vercel) |
 | Notifications | Sonner (toasts) + an in-app event log (see below) |
 
 **Layering, strictly enforced throughout:**
@@ -191,13 +191,24 @@ Full schema: `packages/db/prisma/schema.prisma`.
 Single shared admin password — no per-user accounts, matching the
 single-instructor scale of the rest of the app. `apps/web/src/middleware.ts`
 blocks every route except an explicit public allowlist
-(`/apply`, `/edit/{token}`, `/login`, and the API routes those pages call)
-behind a signed session cookie. Logging in at `/login` checks the submitted
-password against `ADMIN_PASSWORD` and sets an HMAC-signed cookie
+(`/apply`, `/edit/{token}`, `/login`, `/reset-password`, and the API routes
+those pages call) behind a signed session cookie. Logging in at `/login`
+checks the submitted password and sets an HMAC-signed cookie
 (`apps/web/src/lib/admin-session.ts`, Web Crypto `crypto.subtle` so it works
 in either an Edge or Node middleware runtime — no session store, no extra
-dependency). There's deliberately no user table: change the password by
-updating `ADMIN_PASSWORD` in Vercel.
+dependency).
+
+**The password itself is DB-backed, not a fixed env var.** `ADMIN_PASSWORD`
+is only a *bootstrap* value for a brand-new deployment that's never had its
+password changed. "Forgot password?" on `/login` (or "Change password" once
+signed in) emails a one-time reset link — via Gmail SMTP, `apps/web/src/lib/mailer.ts`
+— to one hardcoded address (`ADMIN_NOTIFICATION_EMAIL` in that file, not
+user-suppliable at request time), which is what makes the flow safe to expose
+without being logged in: only whoever controls that inbox can ever complete a
+reset. The first successful reset writes a scrypt-hashed password
+(`apps/web/src/lib/password-hash.ts` — Node's built-in `crypto.scrypt`, no
+extra dependency) to the singleton `AdminCredential` row, which is checked
+before `ADMIN_PASSWORD` from then on.
 
 Student self-edit links (`/edit/{token}`) are a *separate*, narrower
 mechanism — a random per-student token (`Student.editAccessToken`, generated
@@ -304,27 +315,50 @@ pnpm db:studio     # Prisma Studio — browse the database visually
 
 ## Deployment
 
-Deployed on Vercel, database on Neon, photos + Aadhar uploads on Vercel Blob.
+Database is Neon Postgres regardless of where the app itself runs. File
+storage is Cloudflare R2 (S3-compatible, works from any host — not tied to
+whichever platform runs the app) with Vercel Blob still supported as an
+alternative. `apps/web/src/lib/file-storage.ts` picks between them by
+whichever env vars are set: R2 first, then Vercel Blob, then local disk
+(dev only — every host this app targets has an ephemeral filesystem in
+production, so local disk must never be reached there).
+
 Environment variables the app needs in production:
 
 | Variable | Purpose | Where it comes from |
 |---|---|---|
 | `DATABASE_URL` | Postgres connection | Neon dashboard → connection string |
-| `BLOB_READ_WRITE_TOKEN` | Photo/document storage | Auto-injected once a Blob store is linked to the Vercel project |
-| `ADMIN_PASSWORD` | Admin login | Set it yourself — see [Authentication](#authentication) |
+| `ADMIN_PASSWORD` | Bootstrap admin password (until the first email-verified change) | Set it yourself — see [Authentication](#authentication) |
 | `ADMIN_SESSION_SECRET` | Signs the admin session cookie | Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
+| `GMAIL_USER` | Sends the password-reset email | A Gmail address |
+| `GMAIL_APP_PASSWORD` | Auths that Gmail account for SMTP | Google Account → Security → App Passwords (needs 2-Step Verification on) |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` | Photo/Aadhar storage | Cloudflare dashboard → R2 → create a bucket + API token, and enable the bucket's public URL (or a custom domain) |
+| `BLOB_READ_WRITE_TOKEN` | Alternative to R2, if hosting on Vercel | Auto-injected once a Blob store is linked to the Vercel project |
 
 The WhatsApp feature uses a zero-credential `wa.me` deep link rather than the
 Meta Business API, so it needs no key.
 
-**Monorepo-on-Vercel specifics**, if you're setting this up fresh: the
-project's Root Directory must be set to `apps/web`, and
-`next.config.ts` uses `@prisma/nextjs-monorepo-workaround-plugin` — without
-it, Vercel's build correctly generates the Prisma query engine but the
-Next.js bundler's file tracing doesn't discover it (it's loaded via a
-dynamically-computed path), so the deployed function crashes with
-`PrismaClientInitializationError`. That plugin is the documented fix for
-exactly this pnpm-monorepo scenario.
+### Deploying on Render (current default)
+
+`render.yaml` at the repo root is a Blueprint — Render → New → Blueprint →
+connect this GitHub repo, and it picks up the build/start commands and env
+var slots automatically; you just fill in the values in Render's dashboard
+(they're marked `sync: false` in the blueprint, meaning Render prompts for
+them rather than trying to guess). Free tier: the service spins down after
+15 minutes of inactivity and cold-starts on the next request — fine for a
+single-studio admin tool, not for something needing instant response at all
+hours.
+
+### Deploying on Vercel (alternative)
+
+Also fully supported — this is how the app was originally deployed. The
+project's Root Directory must be set to `apps/web`, and `next.config.ts`
+uses `@prisma/nextjs-monorepo-workaround-plugin` — without it, Vercel's
+build correctly generates the Prisma query engine but the Next.js bundler's
+file tracing doesn't discover it (it's loaded via a dynamically-computed
+path), so the deployed function crashes with `PrismaClientInitializationError`.
+That plugin is the documented fix for exactly this pnpm-monorepo scenario.
+On Vercel, set `BLOB_READ_WRITE_TOKEN` instead of the `R2_*` variables.
 
 ## Desktop and mobile apps
 

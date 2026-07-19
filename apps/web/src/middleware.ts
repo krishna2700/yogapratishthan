@@ -1,8 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ADMIN_SESSION_COOKIE, verifySessionToken } from "@/lib/admin-session";
 
-const PUBLIC_PAGE_PREFIXES = ["/apply", "/edit/", "/login"];
-const PUBLIC_API_EXACT = ["/api/auth/login", "/api/upload", "/api/upload/document"];
+const PUBLIC_PAGE_PREFIXES = ["/apply", "/edit/", "/login", "/reset-password"];
+const PUBLIC_API_EXACT = [
+  "/api/auth/login",
+  "/api/auth/request-password-reset",
+  "/api/auth/reset-password",
+  "/api/upload",
+  "/api/upload/document",
+];
 const PUBLIC_API_PREFIXES = ["/api/admission-requests", "/api/edit-access/"];
 
 function isPublicPath(pathname: string): boolean {
