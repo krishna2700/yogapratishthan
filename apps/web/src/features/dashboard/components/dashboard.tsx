@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
 import {
+  ArrowRight,
   CalendarOff,
   ClipboardCheck,
+  FileText,
   Repeat,
   ShieldAlert,
   TrendingDown,
@@ -13,11 +15,12 @@ import {
   Users,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EVENT_DISPLAY } from "@/features/notifications/lib/event-display";
 import { initialsOf } from "@/features/student-directory/lib/format";
 import type { EventWithStudent } from "@/features/notifications/hooks/use-events";
-import type { Batch, Student, Vacation } from "@yogapratishthan/db";
+import type { AdmissionRequest, Batch, Student, Vacation } from "@yogapratishthan/db";
 
 interface DashboardData {
   studentsToday: number;
@@ -28,6 +31,7 @@ interface DashboardData {
   upcomingVacations: Vacation[];
   recentAdmissions: (Student & { batch: Batch })[];
   recentActivity: EventWithStudent[];
+  pendingAdmissionRequests: AdmissionRequest[];
 }
 
 export function Dashboard() {
@@ -63,8 +67,39 @@ export function Dashboard() {
     { label: "Upcoming vacations", value: data.upcomingVacations.length, icon: CalendarOff, href: "/vacations" },
   ];
 
+  const pendingCount = data.pendingAdmissionRequests.length;
+
   return (
     <div className="flex flex-col gap-8">
+      {pendingCount > 0 && (
+        <Link
+          href="/admission-requests"
+          className="flex flex-col gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 shadow-sm transition-colors hover:bg-primary/10 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <FileText className="size-4.5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {pendingCount} new admission request{pendingCount === 1 ? "" : "s"} waiting for review
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {data.pendingAdmissionRequests
+                  .slice(0, 3)
+                  .map((r) => `${r.firstName} ${r.lastName}`)
+                  .join(", ")}
+                {pendingCount > 3 ? `, +${pendingCount - 3} more` : ""}
+              </p>
+            </div>
+          </div>
+          <Button size="sm" className="shrink-0" render={<span />}>
+            Review now
+            <ArrowRight className="size-3.5" />
+          </Button>
+        </Link>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {widgets.map((widget) => (
           <Link

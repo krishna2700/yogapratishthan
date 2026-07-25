@@ -1,5 +1,5 @@
 import "server-only";
-import { prisma, SessionStatus } from "@yogapratishthan/db";
+import { prisma, SessionStatus, AdmissionRequestStatus } from "@yogapratishthan/db";
 import { getSessionStatsForStudents } from "@/features/session-engine/services/session-service";
 import { addUTCDays, todayUTC } from "@/lib/calendar-date";
 
@@ -8,8 +8,17 @@ const LOW_SESSIONS_THRESHOLD = 2;
 export async function getDashboardData() {
   const today = todayUTC();
 
-  const [todaysSessions, presentToday, absentToday, students, pendingMakeups, upcomingVacations, recentAdmissions, recentActivity] =
-    await Promise.all([
+  const [
+    todaysSessions,
+    presentToday,
+    absentToday,
+    students,
+    pendingMakeups,
+    upcomingVacations,
+    recentAdmissions,
+    recentActivity,
+    pendingAdmissionRequests,
+  ] = await Promise.all([
       prisma.session.findMany({
         where: {
           scheduledDate: today,
@@ -31,6 +40,11 @@ export async function getDashboardData() {
         orderBy: { createdAt: "desc" },
         take: 8,
         include: { student: { select: { id: true, firstName: true, lastName: true, photoUrl: true } } },
+      }),
+      prisma.admissionRequest.findMany({
+        where: { status: AdmissionRequestStatus.PENDING },
+        orderBy: { createdAt: "asc" },
+        take: 5,
       }),
     ]);
 
@@ -54,5 +68,6 @@ export async function getDashboardData() {
     upcomingVacations,
     recentAdmissions,
     recentActivity,
+    pendingAdmissionRequests,
   };
 }
