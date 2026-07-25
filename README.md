@@ -202,10 +202,10 @@ dependency).
 is only a *bootstrap* value for a brand-new deployment that's never had its
 password changed. "Forgot password?" on `/login` (or "Change password" once
 signed in) emails a one-time reset link — via Gmail SMTP, `apps/web/src/lib/mailer.ts`
-— to one hardcoded address (`ADMIN_NOTIFICATION_EMAIL` in that file, not
-user-suppliable at request time), which is what makes the flow safe to expose
-without being logged in: only whoever controls that inbox can ever complete a
-reset. The first successful reset writes a scrypt-hashed password
+— to a fixed, hardcoded list of addresses (`ADMIN_NOTIFICATION_EMAILS` in that
+file, not user-suppliable at request time), which is what makes the flow safe
+to expose without being logged in: only whoever controls those inboxes can
+ever complete a reset. The first successful reset writes a scrypt-hashed password
 (`apps/web/src/lib/password-hash.ts` — Node's built-in `crypto.scrypt`, no
 extra dependency) to the singleton `AdminCredential` row, which is checked
 before `ADMIN_PASSWORD` from then on.
