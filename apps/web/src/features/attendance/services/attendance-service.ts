@@ -21,10 +21,6 @@ export async function getTodaysSessions() {
   });
 }
 
-function monthKeyOf(date: Date): string {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
 /** Statuses shown in the register grid. CANCELLED/EXPIRED rows are never a
  *  real class day for the student, so they're excluded entirely. */
 const REGISTER_STATUSES: SessionStatus[] = [
@@ -34,18 +30,6 @@ const REGISTER_STATUSES: SessionStatus[] = [
   SessionStatus.ABSENT,
   SessionStatus.VACATION,
 ];
-
-/** Every distinct month (as "YYYY-MM") that has at least one register-relevant
- *  session for this batch — drives the attendance sidebar's month list. */
-export async function getRegisterMonths(batchId: string): Promise<string[]> {
-  const sessions = await prisma.session.findMany({
-    where: { batchId, status: { in: REGISTER_STATUSES } },
-    select: { scheduledDate: true },
-  });
-
-  const months = new Set(sessions.map((s) => monthKeyOf(s.scheduledDate)));
-  return [...months].sort();
-}
 
 export interface RegisterCell {
   sessionId: string;

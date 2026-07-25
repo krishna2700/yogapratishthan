@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Check, Loader2, Users, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2, Users, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -13,20 +14,30 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { initialsOf } from "@/features/student-directory/lib/format";
 import { useBatches } from "@/features/student-admission/hooks/use-batches";
 import { AbsenceReasonDialog } from "@/features/session-engine/components/absence-reason-dialog";
 import { todayUTC } from "@/lib/calendar-date";
-import { useBatchMonths } from "../hooks/use-batch-months";
 import { useAttendanceRegister } from "../hooks/use-attendance-register";
 import type { AbsenceReason } from "@yogapratishthan/db";
 
 const MARKABLE_STATUSES = new Set(["UPCOMING", "MAKEUP"]);
 
+function monthKeyOf(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 function monthLabel(monthKey: string): string {
   const [year, month] = monthKey.split("-").map(Number) as [number, number];
   return format(new Date(Date.UTC(year, month - 1, 1)), "MMMM yyyy");
+}
+
+/** Shifts a "YYYY-MM" key by `delta` months in either direction — the whole
+ *  point is that any month is reachable, not just ones with existing data. */
+function shiftMonth(monthKey: string, delta: number): string {
+  const [year, month] = monthKey.split("-").map(Number) as [number, number];
+  const shifted = new Date(Date.UTC(year, month - 1 + delta, 1));
+  return monthKeyOf(shifted);
 }
 
 export function AttendanceRegister() {
@@ -70,66 +81,47 @@ export function AttendanceRegister() {
 }
 
 function BatchRegister({ batchId }: { batchId: string }) {
-  const { months, isLoading: monthsLoading } = useBatchMonths(batchId);
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (months.length === 0) {
-      setSelectedMonth(null);
-      return;
-    }
-    const currentMonth = monthLabelKey(todayUTC());
-    setSelectedMonth(months.includes(currentMonth) ? currentMonth : months[months.length - 1]!);
-  }, [months]);
+  const currentMonth = useMemo(() => monthKeyOf(todayUTC()), []);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   const { data, isLoading: registerLoading, reload } = useAttendanceRegister(batchId, selectedMonth);
 
-  if (monthsLoading) {
-    return <Skeleton className="h-64 rounded-xl" />;
-  }
-
-  if (months.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
-        <Users className="size-8 text-muted-foreground" />
-        <p className="text-sm font-medium text-foreground">No sessions yet for this batch</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex gap-5">
-      <div className="flex w-36 shrink-0 flex-col gap-1 overflow-y-auto rounded-xl border border-border/60 bg-card p-2" style={{ maxHeight: 480 }}>
-        {months.map((month) => (
-          <button
-            key={month}
-            type="button"
-            onClick={() => setSelectedMonth(month)}
-            className={cn(
-              "rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors",
-              selectedMonth === month
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            {monthLabel(month)}
-          </button>
-        ))}
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card px-3 py-2">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Previous month"
+          onClick={() => setSelectedMonth((m) => shiftMonth(m, -1))}
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-foreground">{monthLabel(selectedMonth)}</p>
+          {selectedMonth !== currentMonth && (
+            <Button variant="outline" size="sm" onClick={() => setSelectedMonth(currentMonth)}>
+              Today
+            </Button>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Next month"
+          onClick={() => setSelectedMonth((m) => shiftMonth(m, 1))}
+        >
+          <ChevronRight className="size-4" />
+        </Button>
       </div>
 
-      <div className="min-w-0 flex-1">
-        {registerLoading || !data ? (
-          <Skeleton className="h-64 w-full rounded-xl" />
-        ) : (
-          <RegisterGrid data={data} onChange={reload} />
-        )}
-      </div>
+      {registerLoading || !data ? (
+        <Skeleton className="h-64 w-full rounded-xl" />
+      ) : (
+        <RegisterGrid data={data} onChange={reload} />
+      )}
     </div>
   );
-}
-
-function monthLabelKey(date: Date): string {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 function RegisterGrid({
