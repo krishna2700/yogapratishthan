@@ -19,6 +19,7 @@ import { useBatches } from "@/features/student-admission/hooks/use-batches";
 import { AbsenceReasonDialog } from "@/features/session-engine/components/absence-reason-dialog";
 import { todayUTC } from "@/lib/calendar-date";
 import { useAttendanceRegister } from "../hooks/use-attendance-register";
+import { MonthPickerPopover } from "./month-picker-popover";
 import type { AbsenceReason } from "@yogapratishthan/db";
 
 const MARKABLE_STATUSES = new Set(["UPCOMING", "MAKEUP"]);
@@ -98,7 +99,7 @@ function BatchRegister({ batchId }: { batchId: string }) {
           <ChevronLeft className="size-4" />
         </Button>
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-foreground">{monthLabel(selectedMonth)}</p>
+          <MonthPickerPopover value={selectedMonth} label={monthLabel(selectedMonth)} onChange={setSelectedMonth} />
           {selectedMonth !== currentMonth && (
             <Button variant="outline" size="sm" onClick={() => setSelectedMonth(currentMonth)}>
               Today
