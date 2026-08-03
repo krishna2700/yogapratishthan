@@ -1,4 +1,4 @@
-import { AdmissionForm } from "@/features/student-admission/components/admission-form";
+import { QuickAddStudentForm } from "@/features/student-admission/components/quick-add-student-form";
 
 export default function NewStudentPage() {
   return (
@@ -7,15 +7,14 @@ export default function NewStudentPage() {
         <p className="text-xs font-medium tracking-wide text-primary uppercase">
           Yogapratishthan · Iyengar Yoga Center
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-          New student admission
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Quick add student</h1>
         <p className="text-sm text-muted-foreground">
-          Fill in the student&apos;s details from their admission form below.
+          Just the essentials — name, joining date, batch, sessions, and fees. Once added, send the student an
+          edit link via WhatsApp so they can fill in the rest.
         </p>
       </header>
 
-      <AdmissionForm />
+      <QuickAddStudentForm />
     </div>
   );
 }

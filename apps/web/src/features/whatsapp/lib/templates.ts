@@ -25,6 +25,11 @@ export const WHATSAPP_TEMPLATES: { label: string; build: (ctx: TemplateContext) 
   },
 ];
 
+/** Message for the self-edit link, sent once an admin quick-adds a student. */
+export function buildCompleteFormMessage(firstName: string, url: string): string {
+  return `Hi ${firstName}, thanks for joining Yogapratishthan! Please complete the rest of your admission details here: ${url}`;
+}
+
 /** wa.me needs digits only, with country code. Assumes Indian numbers. */
 export function toWhatsAppLink(phone: string, message: string): string {
   const digits = phone.replace(/\D/g, "");

@@ -229,7 +229,7 @@ export function StudentDetail({ studentId }: { studentId: string }) {
         onDeleted={() => router.push("/students")}
       />
       <EditAccessDialog
-        studentId={editAccessOpen ? student.id : null}
+        student={editAccessOpen ? student : null}
         editAccessToken={student.editAccessToken}
         onOpenChange={setEditAccessOpen}
         onChanged={reload}
