@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-border/60 bg-card px-4 py-6 md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-border/60 bg-card px-4 py-6 md:sticky md:top-0 md:flex md:h-screen">
         <BrandHeader />
         <div className="mt-8">
           <SidebarNav />
